@@ -8,7 +8,7 @@
 <title>Neon Ring Clock</title>
 
 <!-- PWA設定 -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#00ffd5">
 
 <style>
@@ -74,11 +74,9 @@ const cycle = 2000;
 function hsv(h, s, v) {
   const f = (n, k = (n + h / 60) % 6) =>
     v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
-  return `rgb(
-    ${Math.round(f(5) * 255)},
-    ${Math.round(f(3) * 255)},
-    ${Math.round(f(1) * 255)}
-  )`;
+  return `rgb(${Math.round(f(5)*255)},
+              ${Math.round(f(3)*255)},
+              ${Math.round(f(1)*255)})`;
 }
 
 function draw(start, end, color) {
@@ -141,12 +139,14 @@ function update() {
 update();
 </script>
 
-<!-- Service Worker 登録 -->
+<!-- GitHub Pages対応 Service Worker登録 -->
 <script>
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
-    .then(() => console.log("Service Worker Registered"))
-    .catch(err => console.log("SW registration failed:", err));
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" })
+      .then(reg => console.log("SW registered:", reg.scope))
+      .catch(err => console.log("SW failed:", err));
+  });
 }
 </script>
 
