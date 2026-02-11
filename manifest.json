@@ -1,13 +1,12 @@
 　manifest
 
 {
-  "name": "Neon Ring Clock",
-  "short_name": "RingClock",
+  "name": "ネオンHUD時計",
+  "short_name": "HUD時計",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#00ffff",
-  "orientation": "portrait",
+  "theme_color": "#00ffd5",
   "icons": [
     {
       "src": "icon-192.png",

@@ -1,56 +1,54 @@
-　
+index
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Neon Ring Clock</title>
+<title>ネオンHUD時計</title>
 
-<!-- PWA設定 -->
-<link rel="manifest" href="./manifest.json">
+<!-- ★ 追加（PWA用） -->
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#00ffd5">
 
 <style>
-body {
-  margin: 0;
-  height: 100vh;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: monospace;
-}
+  body {
+    margin: 0;
+    height: 100vh;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: monospace;
+  }
 
-.wrap {
-  position: relative;
-  width: 360px;
-  height: 360px;
-}
+  .wrap {
+    position: relative;
+    width: 360px;
+    height: 360px;
+  }
 
-canvas {
-  width: 360px;
-  height: 360px;
-}
+  canvas {
+    width: 360px;
+    height: 360px;
+  }
 
-.digital {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 52px;
-  letter-spacing: 4px;
-  color: #00ffd5;
-  pointer-events: none;
-  text-shadow:
-    0 0 8px currentColor,
-    0 0 18px currentColor,
-    0 0 36px currentColor;
-}
+  .digital {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 52px;
+    letter-spacing: 4px;
+    color: #00ffd5;
+    pointer-events: none;
+    text-shadow:
+      0 0 8px currentColor,
+      0 0 18px currentColor,
+      0 0 36px currentColor;
+  }
 </style>
 </head>
-
 <body>
 
 <div class="wrap">
@@ -59,11 +57,17 @@ canvas {
 </div>
 
 <script>
+// ★ 追加（Service Worker登録）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 const cx = 180;
 const cy = 180;
+
 const r = 145;
 const lineW = 22;
 
@@ -74,9 +78,11 @@ const cycle = 2000;
 function hsv(h, s, v) {
   const f = (n, k = (n + h / 60) % 6) =>
     v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
-  return `rgb(${Math.round(f(5)*255)},
-              ${Math.round(f(3)*255)},
-              ${Math.round(f(1)*255)})`;
+  return `rgb(
+    ${Math.round(f(5) * 255)},
+    ${Math.round(f(3) * 255)},
+    ${Math.round(f(1) * 255)}
+  )`;
 }
 
 function draw(start, end, color) {
@@ -137,17 +143,6 @@ function update() {
 }
 
 update();
-</script>
-
-<!-- GitHub Pages対応 Service Worker登録 -->
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js", { scope: "./" })
-      .then(reg => console.log("SW registered:", reg.scope))
-      .catch(err => console.log("SW failed:", err));
-  });
-}
 </script>
 
 </body>
