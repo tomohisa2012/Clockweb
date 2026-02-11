@@ -1,0 +1,154 @@
+　
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Ring Clock</title>
+
+<!-- PWA設定 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00ffd5">
+
+<style>
+body {
+  margin: 0;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: monospace;
+}
+
+.wrap {
+  position: relative;
+  width: 360px;
+  height: 360px;
+}
+
+canvas {
+  width: 360px;
+  height: 360px;
+}
+
+.digital {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 52px;
+  letter-spacing: 4px;
+  color: #00ffd5;
+  pointer-events: none;
+  text-shadow:
+    0 0 8px currentColor,
+    0 0 18px currentColor,
+    0 0 36px currentColor;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+  <canvas id="c" width="360" height="360"></canvas>
+  <div class="digital" id="clock">00:00:00</div>
+</div>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const cx = 180;
+const cy = 180;
+const r = 145;
+const lineW = 22;
+
+const startAngle = -Math.PI / 2;
+const full = Math.PI * 2;
+const cycle = 2000;
+
+function hsv(h, s, v) {
+  const f = (n, k = (n + h / 60) % 6) =>
+    v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+  return `rgb(
+    ${Math.round(f(5) * 255)},
+    ${Math.round(f(3) * 255)},
+    ${Math.round(f(1) * 255)}
+  )`;
+}
+
+function draw(start, end, color) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.lineWidth = lineW;
+  ctx.strokeStyle = "#222";
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, full);
+  ctx.stroke();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  ctx.lineCap = "round";
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 24;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, start, end);
+  ctx.stroke();
+
+  const ex = cx + Math.cos(end) * r;
+  const ey = cy + Math.sin(end) * r;
+
+  ctx.fillStyle = color;
+  ctx.shadowBlur = 40;
+  ctx.beginPath();
+  ctx.arc(ex, ey, lineW / 2, 0, full);
+  ctx.fill();
+}
+
+function update() {
+  const now = new Date();
+
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  const s = String(now.getSeconds()).padStart(2, "0");
+  document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+
+  const hue = (now.getTime() / 30) % 360;
+  const color = hsv(hue, 0.25, 1);
+  document.getElementById("clock").style.color = color;
+
+  const t = (now.getTime() % cycle) / cycle;
+
+  let start, end;
+  if (t <= 0.5) {
+    start = startAngle;
+    end = startAngle + full * (t * 2);
+  } else {
+    start = startAngle + full * ((t - 0.5) * 2);
+    end = startAngle + full;
+  }
+
+  draw(start, end, color);
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+<!-- Service Worker 登録 -->
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js")
+    .then(() => console.log("Service Worker Registered"))
+    .catch(err => console.log("SW registration failed:", err));
+}
+</script>
+
+</body>
+</html>
