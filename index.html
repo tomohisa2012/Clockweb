@@ -1,149 +1,527 @@
 index
 
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>ネオンHUD時計</title>
+<title>Neo HUD System</title>
 
-<!-- ★ 追加（PWA用） -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#00ffd5">
+<meta name="theme-color" content="#00ccff">
 
 <style>
-  body {
-    margin: 0;
-    height: 100vh;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: monospace;
-  }
+:root{
+  --bg:#ffffff;
+  --panel:rgba(255,255,255,0.6);
+  --accent:hsl(200,80%,60%);
+  --text:#111;
+  transition:0.4s;
+}
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:Segoe UI, sans-serif;
+  display:flex;
+  color:var(--text);
+  overflow:hidden;
+  transition:0.4s;
+}
+body.dark{
+  --bg:#0f1420;
+  --panel:rgba(20,25,40,0.9);
+  --text:#ffffff;
+}
 
-  .wrap {
-    position: relative;
-    width: 360px;
-    height: 360px;
-  }
+/* sidebar */
+.sidebar{
+  width:170px;
+  position:fixed;
+  left:0;top:0;bottom:0;
+  background:rgba(240,245,255,0.9);
+  backdrop-filter:blur(10px);
+  border-right:2px solid var(--accent);
+  padding:15px;
+  transition:0.4s;
+}
+body.dark .sidebar{
+  background:rgba(10,15,30,0.95);
+}
+.sidebar button{
+  width:100%;
+  margin-bottom:10px;
+  padding:10px;
+  background:transparent;
+  border:1px solid var(--accent);
+  cursor:pointer;
+  color:var(--text);
+  transition:0.3s;
+}
+.sidebar button:hover{
+  background:var(--accent);
+  color:#000;
+}
 
-  canvas {
-    width: 360px;
-    height: 360px;
-  }
+/* main */
+.main{
+  margin-left:170px;
+  width:100%;
+  padding:30px;
+  text-align:center;
+}
+.section{display:none;}
+.section.active{display:block;}
 
-  .digital {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 52px;
-    letter-spacing: 4px;
-    color: #00ffd5;
-    pointer-events: none;
-    text-shadow:
-      0 0 8px currentColor,
-      0 0 18px currentColor,
-      0 0 36px currentColor;
-  }
+.hudPanel{
+  background:var(--panel);
+  border:2px solid var(--accent);
+  border-radius:15px;
+  padding:30px;
+  transition:0.4s;
+}
+
+.neon{
+  box-shadow:0 0 20px var(--accent),0 0 40px var(--accent);
+}
+
+/* clock */
+svg{width:300px;height:300px;}
+circle{
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:15;
+  stroke-linecap:round;
+  transform:rotate(-90deg);
+  transform-origin:50% 50%;
+}
+.bigTime{font-size:70px;margin-top:20px;}
+
+/* timer/alarm */
+.timeWrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
+.timeBlock{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.timeBlock button{
+  background:transparent;
+  border:1px solid var(--accent);
+  cursor:pointer;
+  color:var(--text);
+}
+.timeNum{font-size:80px;}
+
+/* stopwatch */
+.lapZone{
+  height:180px;
+  overflow-y:auto;
+  border:1px solid var(--accent);
+  margin-top:20px;
+  padding:10px;
+}
+
+/* calendar */
+.calendarHeader{
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  align-items:center;
+}
+.calendarWeek{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  margin-top:15px;
+  font-weight:bold;
+}
+.calendarWeek div:first-child{color:#ff6b6b;}
+.calendarWeek div:last-child{color:#4a90ff;}
+
+.calendarGrid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:5px;
+  margin-top:10px;
+}
+.day{
+  padding:10px;
+  background:#eef3ff;
+  cursor:pointer;
+  transition:0.3s;
+}
+body.dark .day{background:#1c2333;color:#fff;}
+
+.today{background:#ffd6e7 !important;}
+.selected{background:var(--accent) !important;color:#000 !important;}
+.saturday{background:#d0e7ff !important;}
+.sunday{background:#ffd6d6 !important;}
+.holiday{background:#ffb3b3 !important;font-weight:bold;}
+
+.eventBox{
+  margin-top:15px;
+  border-top:1px solid var(--accent);
+  padding-top:10px;
+}
+.eventItem{
+  display:flex;
+  justify-content:space-between;
+  margin-top:5px;
+  font-size:14px;
+}
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <canvas id="c" width="360" height="360"></canvas>
-  <div class="digital" id="clock">00:00:00</div>
+<div class="sidebar">
+<button onclick="show('clock')">時計</button>
+<button onclick="show('timer')">タイマー</button>
+<button onclick="show('alarm')">アラーム</button>
+<button onclick="show('stopwatch')">ストップウォッチ</button>
+<button onclick="show('calendar')">カレンダー</button>
+<button onclick="show('settings')">設定</button>
+</div>
+
+<div class="main">
+
+<!-- CLOCK -->
+<div id="clock" class="section active">
+<div class="hudPanel">
+<svg viewBox="0 0 200 200">
+<circle id="ring" cx="100" cy="100" r="80"
+stroke-dasharray="502"
+stroke-dashoffset="502"/>
+</svg>
+<div id="clockText" class="bigTime"></div>
+</div>
+</div>
+
+<!-- TIMER -->
+<div id="timer" class="section">
+<div class="hudPanel">
+<div class="timeWrap">
+<div class="timeBlock">
+<button onmousedown="hold(incTM)">↑</button>
+<div id="tmM" class="timeNum">00</div>
+<button onmousedown="hold(decTM)">↓</button>
+</div>
+<div class="timeNum">:</div>
+<div class="timeBlock">
+<button onmousedown="hold(incTS)">↑</button>
+<div id="tmS" class="timeNum">00</div>
+<button onmousedown="hold(decTS)">↓</button>
+</div>
+</div>
+<br>
+<button onclick="startTimer()">開始</button>
+<button onclick="stopTimer()">停止</button>
+<button onclick="resetTimer()">リセット</button>
+</div>
+</div>
+
+<!-- ALARM -->
+<div id="alarm" class="section">
+<div class="hudPanel">
+<div class="timeWrap">
+<div class="timeBlock">
+<button onmousedown="hold(incAH)">↑</button>
+<div id="aH" class="timeNum">00</div>
+<button onmousedown="hold(decAH)">↓</button>
+</div>
+<div class="timeNum">:</div>
+<div class="timeBlock">
+<button onmousedown="hold(incAM)">↑</button>
+<div id="aM" class="timeNum">00</div>
+<button onmousedown="hold(decAM)">↓</button>
+</div>
+</div>
+<br>
+<button onclick="setAlarm()">アラームON</button>
+<button onclick="clearAlarm()">停止</button>
+</div>
+</div>
+
+<!-- STOPWATCH -->
+<div id="stopwatch" class="section">
+<div class="hudPanel">
+<div id="swTime" class="bigTime">00:00.00</div>
+<button onclick="startSW()">開始</button>
+<button onclick="stopSW()">停止</button>
+<button onclick="resetSW()">リセット</button>
+<button onclick="addLap()">ラップ</button>
+<div class="lapZone" id="laps"></div>
+</div>
+</div>
+
+<!-- CALENDAR -->
+<div id="calendar" class="section">
+<div class="hudPanel">
+<div class="calendarHeader">
+<button onclick="prevMonth()">←</button>
+<div id="monthLabel"></div>
+<button onclick="nextMonth()">→</button>
+</div>
+
+<div class="calendarWeek">
+<div>日</div><div>月</div><div>火</div>
+<div>水</div><div>木</div><div>金</div><div>土</div>
+</div>
+
+<div class="calendarGrid" id="calGrid"></div>
+<div id="eventArea" class="eventBox"></div>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="section">
+<div class="hudPanel">
+<label><input type="checkbox" id="neonToggle"> ネオンON</label><br>
+<label><input type="checkbox" id="colorToggle" checked> 色変化ON</label><br>
+<label><input type="checkbox" id="soundToggle" checked> 音ON</label><br>
+<label><input type="checkbox" id="darkToggle"> ダークモード</label>
+</div>
+</div>
+
 </div>
 
 <script>
-// ★ 追加（Service Worker登録）
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
+
+/* ---------- UI切替 ---------- */
+function show(id){
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
 }
 
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+/* ---------- 時計 ---------- */
+setInterval(()=>{
+let d=new Date();
+clockText.textContent=d.toLocaleTimeString();
+},1000);
 
-const cx = 180;
-const cy = 180;
+/* ---------- リングアニメ ---------- */
+let start=Date.now();
+function animate(){
+let t=((Date.now()-start)%120000)/120000;
+ring.setAttribute("stroke-dashoffset",502*(1-t));
 
-const r = 145;
-const lineW = 22;
+if(neonToggle.checked)
+document.querySelectorAll('.hudPanel,button').forEach(e=>e.classList.add("neon"));
+else
+document.querySelectorAll('.hudPanel,button').forEach(e=>e.classList.remove("neon"));
 
-const startAngle = -Math.PI / 2;
-const full = Math.PI * 2;
-const cycle = 2000;
+if(colorToggle.checked){
+let hue=(Date.now()/40)%360;
+document.documentElement.style.setProperty('--accent',`hsl(${hue},80%,60%)`);
+}
+requestAnimationFrame(animate);
+}
+animate();
 
-function hsv(h, s, v) {
-  const f = (n, k = (n + h / 60) % 6) =>
-    v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
-  return `rgb(
-    ${Math.round(f(5) * 255)},
-    ${Math.round(f(3) * 255)},
-    ${Math.round(f(1) * 255)}
-  )`;
+/* ---------- ダーク ---------- */
+darkToggle.onchange=()=>document.body.classList.toggle("dark");
+
+/* ---------- 音 ---------- */
+let audioCtx,osc;
+function startBeep(){
+if(!soundToggle.checked) return;
+audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+osc=audioCtx.createOscillator();
+osc.frequency.value=880;
+osc.connect(audioCtx.destination);
+osc.start();
+}
+function stopBeep(){
+if(osc){osc.stop();osc=null;}
 }
 
-function draw(start, end, color) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.lineWidth = lineW;
-  ctx.strokeStyle = "#222";
-  ctx.shadowBlur = 0;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, full);
-  ctx.stroke();
-
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineW;
-  ctx.lineCap = "round";
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 24;
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, start, end);
-  ctx.stroke();
-
-  const ex = cx + Math.cos(end) * r;
-  const ey = cy + Math.sin(end) * r;
-
-  ctx.fillStyle = color;
-  ctx.shadowBlur = 40;
-  ctx.beginPath();
-  ctx.arc(ex, ey, lineW / 2, 0, full);
-  ctx.fill();
+/* ---------- 長押し ---------- */
+function hold(func){
+func();
+let i=setInterval(func,120);
+document.onmouseup=()=>clearInterval(i);
 }
 
-function update() {
-  const now = new Date();
+/* ---------- タイマー ---------- */
+let tmM=0,tmS=0,timerInt;
+let tmMEl=document.getElementById("tmM");
+let tmSEl=document.getElementById("tmS");
+function updateTM(){
+tmMEl.textContent=tmM.toString().padStart(2,"0");
+tmSEl.textContent=tmS.toString().padStart(2,"0");
+}
+function incTM(){tmM=(tmM+1)%100;updateTM();}
+function decTM(){tmM=(tmM-1+100)%100;updateTM();}
+function incTS(){tmS=(tmS+1)%60;updateTM();}
+function decTS(){tmS=(tmS-1+60)%60;updateTM();}
+function startTimer(){
+let total=tmM*60+tmS;
+timerInt=setInterval(()=>{
+if(total<=0){clearInterval(timerInt);startBeep();return;}
+total--;
+tmM=Math.floor(total/60);
+tmS=total%60;
+updateTM();
+},1000);
+}
+function stopTimer(){clearInterval(timerInt);stopBeep();}
+function resetTimer(){clearInterval(timerInt);stopBeep();tmM=0;tmS=0;updateTM();}
 
-  const h = String(now.getHours()).padStart(2, "0");
-  const m = String(now.getMinutes()).padStart(2, "0");
-  const s = String(now.getSeconds()).padStart(2, "0");
-  document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+/* ---------- アラーム ---------- */
+let aH=0,aM=0,alarmInt;
+let aHEl=document.getElementById("aH");
+let aMEl=document.getElementById("aM");
+function updateA(){
+aHEl.textContent=aH.toString().padStart(2,"0");
+aMEl.textContent=aM.toString().padStart(2,"0");
+}
+function incAH(){aH=(aH+1)%24;updateA();}
+function decAH(){aH=(aH-1+24)%24;updateA();}
+function incAM(){aM=(aM+1)%60;updateA();}
+function decAM(){aM=(aM-1+60)%60;updateA();}
+function setAlarm(){
+alarmInt=setInterval(()=>{
+let d=new Date();
+if(d.getHours()==aH&&d.getMinutes()==aM) startBeep();
+},1000);
+}
+function clearAlarm(){clearInterval(alarmInt);stopBeep();}
 
-  const hue = (now.getTime() / 30) % 360;
-  const color = hsv(hue, 0.25, 1);
-  document.getElementById("clock").style.color = color;
-
-  const t = (now.getTime() % cycle) / cycle;
-
-  let start, end;
-  if (t <= 0.5) {
-    start = startAngle;
-    end = startAngle + full * (t * 2);
-  } else {
-    start = startAngle + full * ((t - 0.5) * 2);
-    end = startAngle + full;
-  }
-
-  draw(start, end, color);
-  requestAnimationFrame(update);
+/* ---------- ストップウォッチ ---------- */
+let sw=0,swInt;
+function updateSW(){
+let m=Math.floor(sw/6000);
+let s=Math.floor(sw/100)%60;
+let ms=sw%100;
+swTime.textContent=
+m.toString().padStart(2,"0")+":"+
+s.toString().padStart(2,"0")+"."+
+ms.toString().padStart(2,"0");
+}
+function startSW(){if(!swInt) swInt=setInterval(()=>{sw++;updateSW();},10);}
+function stopSW(){clearInterval(swInt);swInt=null;}
+function resetSW(){clearInterval(swInt);swInt=null;sw=0;updateSW();laps.innerHTML="";}
+function addLap(){
+let d=document.createElement("div");
+d.textContent=swTime.textContent;
+laps.appendChild(d);
 }
 
-update();
+/* ---------- 祝日計算 ---------- */
+function getHoliday(y,m,d){
+const nth=(n,day)=>{
+let date=new Date(y,m-1,1);
+let count=0;
+while(date.getMonth()==m-1){
+if(date.getDay()==day){count++;if(count==n)return date.getDate();}
+date.setDate(date.getDate()+1);
+}
+};
+if(m==1&&d==1) return true;
+if(m==1&&d==nth(2,1)) return true;
+if(m==2&&d==11) return true;
+if(m==4&&d==29) return true;
+if(m==5&&(d==3||d==4||d==5)) return true;
+if(m==7&&d==nth(3,1)) return true;
+if(m==9&&d==nth(3,1)) return true;
+if(m==10&&d==nth(2,1)) return true;
+if(m==11&&(d==3||d==23)) return true;
+return false;
+}
+
+/* ---------- カレンダー ---------- */
+let current=new Date();
+let events=JSON.parse(localStorage.getItem("events")||"{}");
+
+function renderCal(){
+calGrid.innerHTML="";
+eventArea.innerHTML="";
+monthLabel.textContent=current.getFullYear()+" / "+(current.getMonth()+1);
+
+let firstDay=new Date(current.getFullYear(),current.getMonth(),1).getDay();
+let days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+let today=new Date();
+
+for(let i=0;i<firstDay;i++){
+let blank=document.createElement("div");
+calGrid.appendChild(blank);
+}
+
+for(let i=1;i<=days;i++){
+let div=document.createElement("div");
+div.textContent=i;
+div.className="day";
+
+let dow=new Date(current.getFullYear(),current.getMonth(),i).getDay();
+if(dow==0) div.classList.add("sunday");
+if(dow==6) div.classList.add("saturday");
+if(getHoliday(current.getFullYear(),current.getMonth()+1,i))
+div.classList.add("holiday");
+if(i==today.getDate()&&current.getMonth()==today.getMonth())
+div.classList.add("today");
+
+let key=`${current.getFullYear()}-${current.getMonth()+1}-${i}`;
+
+div.onclick=()=>{
+document.querySelectorAll(".day").forEach(d=>d.classList.remove("selected"));
+div.classList.add("selected");
+selectDate(key);
+};
+
+calGrid.appendChild(div);
+}
+}
+
+function selectDate(key){
+eventArea.innerHTML=`<h3>${key}</h3>
+<input id="eventInput">
+<button onclick="addEvent('${key}')">追加</button>
+<div id="eventList"></div>`;
+renderEvents(key);
+}
+
+function addEvent(key){
+let val=document.getElementById("eventInput").value;
+if(!val) return;
+if(!events[key]) events[key]=[];
+events[key].push(val);
+localStorage.setItem("events",JSON.stringify(events));
+renderEvents(key);
+}
+
+function renderEvents(key){
+let list=document.getElementById("eventList");
+if(!list) return;
+list.innerHTML="";
+(events[key]||[]).forEach((e,i)=>{
+let d=document.createElement("div");
+d.className="eventItem";
+d.innerHTML=`${e}
+<span>
+<button onclick="editEvent('${key}',${i})">編集</button>
+<button onclick="deleteEvent('${key}',${i})">削除</button>
+</span>`;
+list.appendChild(d);
+});
+}
+
+function editEvent(key,i){
+let n=prompt("編集",events[key][i]);
+if(n){events[key][i]=n;localStorage.setItem("events",JSON.stringify(events));renderEvents(key);}
+}
+
+function deleteEvent(key,i){
+events[key].splice(i,1);
+localStorage.setItem("events",JSON.stringify(events));
+renderEvents(key);
+}
+
+function prevMonth(){current.setMonth(current.getMonth()-1);renderCal();}
+function nextMonth(){current.setMonth(current.getMonth()+1);renderCal();}
+
+renderCal();
+
 </script>
-
 </body>
 </html>

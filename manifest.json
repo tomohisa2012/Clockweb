@@ -1,12 +1,12 @@
 　manifest
 
 {
-  "name": "ネオンHUD時計",
-  "short_name": "HUD時計",
-  "start_url": "./",
+  "name": "Neo HUD System",
+  "short_name": "NeoHUD",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#00ffd5",
+  "background_color": "#0f1420",
+  "theme_color": "#00ccff",
   "icons": [
     {
       "src": "icon-192.png",
